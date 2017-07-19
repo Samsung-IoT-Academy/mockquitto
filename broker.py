@@ -2,12 +2,26 @@
 
 import logging
 import asyncio
-import os
+import signal
+
 from hbmqtt.broker import Broker
 
+def stop_broker_handler(broker, loop):
+    loop.run_until_complete(broker.shutdown())
+    loop.stop()
+    loop.close()
+    exit(0)
 
-@asyncio.coroutine
-def broker_coro():
+
+async def broker_coro(broker):
+    await broker.start()
+
+
+if __name__ == '__main__':
+    formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
+    logging.basicConfig(level=logging.INFO, format=formatter)
+
+
     config = {
         'listeners': {
             'default': {
@@ -19,11 +33,9 @@ def broker_coro():
         'sys_interval': 10,
     }
     broker = Broker(config)
-    yield from broker.start()
 
+    loop = asyncio.get_event_loop()
 
-if __name__ == '__main__':
-    formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
-    logging.basicConfig(level=logging.INFO, format=formatter)
-    asyncio.get_event_loop().run_until_complete(broker_coro())
-    asyncio.get_event_loop().run_forever()
+    loop.add_signal_handler(signal.SIGINT, stop_broker_handler, broker, loop)
+    loop.run_until_complete(broker_coro(broker))
+    loop.run_forever()
