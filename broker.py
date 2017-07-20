@@ -1,41 +1,81 @@
 #! /usr/bin/env python
 
-import logging
-import asyncio
 import signal
+import errno
+import socket
+import logging
+import functools
+import asyncio
 
 from hbmqtt.broker import Broker
 
-def stop_broker_handler(broker, loop):
-    loop.run_until_complete(broker.shutdown())
-    loop.stop()
-    loop.close()
-    exit(0)
+
+class BrokerConfig:
+    def __init__(self, proto='tcp', domain='localhost', port=1883, max_conns=10, interval=10):
+        self.__proto = proto
+        self.__domain = domain
+        self.__port = broker_port(port)
+        self.__max_conns = max_conns
+        self.__interval = interval
 
 
-async def broker_coro(broker):
-    await broker.start()
+    @property
+    def config(self):
+        return {
+            'listeners': {
+                'default': {
+                    'type': self.__proto,
+                    'bind': self.__domain + ':' + str(self.__port),
+                    'max_connections': self.__max_conns,
+                }
+            },
+            'sys_interval': self.__interval
+        }
+
+    @property
+    def port(self):
+        return self.__port
+
+    @port.setter
+    def port(self, value):
+        self.__port = value
+
+
+@asyncio.coroutine
+def broker_coro(broker, config):
+    yield from broker.start()
+
+def broker_port(port=1883):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while True:
+        try:
+            s.bind(('localhost', port))
+        except OSError as err:
+            if err.errno == errno.EADDRINUSE :
+                port += 1
+            continue
+        break
+    addr, port = s.getsockname()
+    s.close()
+    return port
+
 
 
 if __name__ == '__main__':
     formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
     logging.basicConfig(level=logging.INFO, format=formatter)
+    logger = logging.getLogger(name="MQTT-Broker")
 
-
-    config = {
-        'listeners': {
-            'default': {
-                'type': 'tcp',
-                'bind': 'localhost:1884',
-                'max_connections': 10,
-            }
-        },
-        'sys_interval': 10,
-    }
-    broker = Broker(config)
+    config = BrokerConfig()
+    broker = Broker(config.config)
 
     loop = asyncio.get_event_loop()
 
-    loop.add_signal_handler(signal.SIGINT, stop_broker_handler, broker, loop)
-    loop.run_until_complete(broker_coro(broker))
-    loop.run_forever()
+    loop.run_until_complete(broker_coro(broker, config))
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        loop.run_until_complete(broker.shutdown())
+    finally:
+        logger.info("Closing")
+        loop.close()
