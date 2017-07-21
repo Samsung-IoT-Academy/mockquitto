@@ -16,11 +16,12 @@ class MQTTMockClient:
 
     _logger = None
 
-    def __init__(self, port, logger_name="MQTT_Generator", loop=None, status=True):
+    def __init__(self, port, period=1, logger_name="MQTT_Generator", loop=None, status=True):
         self._loop = asyncio.get_event_loop() if (loop is None) else loop
         self._status = status
         self._client = MQTTClient()
         self._broker_port = port
+        self._period = period
         if MQTTMockClient._logger is None:
             MQTTMockClient._logger = logging.getLogger(logger_name)
 
@@ -68,7 +69,8 @@ class MQTTMockClient:
         try:
             while self._status:
                 message = await client.deliver_message()
-                await asyncio.sleep(1)
+                await asyncio.sleep(self._period)
+                MQTTMockClient._logger.info("Message: %s" % message.data)
         except ClientException as ce:
             MQTTMockClient._logger.error("Client exception: %s" % ce)
 
@@ -76,7 +78,7 @@ class MQTTMockClient:
         # for i in range(1, 20):
         while self._status:
             message = await client.publish(TOPIC, b'i want to publish', qos=HBMQTT_CONST.QOS_1)
-            await asyncio.sleep(1)
+            await asyncio.sleep(self._period)
             MQTTMockClient._logger.debug("Message published")
 
     @classmethod
@@ -93,11 +95,12 @@ class MQTTMockClient:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Example daemon in Python")
     parser.add_argument('-p', '--port', help="Broker's port to connect", action="store", default=1883)
-    parser.add_argument('-v', help='Verbose output', action="count", default=0)
-    parser.add_argument('-q', help="Don't output anything", action="store_true")
+    parser.add_argument('--period', help="Period of message generation", action="store", default=1)
     parser.add_argument('--log_file', nargs='?', help='File for logging', action="store", const="log.log",
                         default=None)
-    parser.set_defaults(v=0, log_to_file=None)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-v', help='Verbose output', action="count", default=0)
+    group.add_argument('-q', help="Don't output anything", action="store_true")
     args = parser.parse_args()
 
     verbosity_level = logging.WARNING
@@ -125,7 +128,10 @@ if __name__ == '__main__':
     else:
         logger.addHandler(logging.StreamHandler())
 
-    client = MQTTMockClient(args.port)
+    # NP: Cloud Nothings — Cut You
+    # I need something I can hurt
+
+    client = MQTTMockClient(args.port, args.period)
     client.setup()
 
     loop = asyncio.get_event_loop()

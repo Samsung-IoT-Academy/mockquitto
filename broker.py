@@ -14,13 +14,12 @@ class BrokerConfig:
     def __init__(self, proto='tcp', domain='localhost', port=1883, max_conns=10, interval=10):
         self.__proto = proto
         self.__domain = domain
-        self.__port = broker_port(port)
+        self.__port = self.broker_port(port)
         self.__max_conns = max_conns
         self.__interval = interval
 
 
-    @property
-    def config(self):
+    def get_config(self):
         return {
             'listeners': {
                 'default': {
@@ -40,25 +39,24 @@ class BrokerConfig:
     def port(self, value):
         self.__port = value
 
+    def broker_port(self, port=1883):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        while True:
+            try:
+                s.bind(('localhost', port))
+            except OSError as err:
+                if err.errno == errno.EADDRINUSE:
+                    port += 1
+                continue
+            break
+        addr, port = s.getsockname()
+        s.close()
+        return port
+
 
 @asyncio.coroutine
 def broker_coro(broker, config):
     yield from broker.start()
-
-def broker_port(port=1883):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    while True:
-        try:
-            s.bind(('localhost', port))
-        except OSError as err:
-            if err.errno == errno.EADDRINUSE :
-                port += 1
-            continue
-        break
-    addr, port = s.getsockname()
-    s.close()
-    return port
-
 
 
 if __name__ == '__main__':
@@ -67,7 +65,7 @@ if __name__ == '__main__':
     logger = logging.getLogger(name="MQTT-Broker")
 
     config = BrokerConfig()
-    broker = Broker(config.config)
+    broker = Broker(config.get_config())
 
     loop = asyncio.get_event_loop()
 
