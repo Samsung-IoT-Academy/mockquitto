@@ -1,3 +1,4 @@
+import sys
 import os
 import signal
 import asyncio
@@ -6,6 +7,8 @@ import logging
 
 from hbmqtt.client import MQTTClient, ClientException, ConnectException
 import hbmqtt.mqtt.constants as HBMQTT_CONST
+
+from mockquitto.client.cli_utils import client_parser
 
 TOPIC = 'paho/temperature'
 
@@ -35,11 +38,17 @@ class MQTTMockClient:
                 MQTTMockClient._logger.critical("Cannot connect to broker. Exit...")
                 exit(0)
 
+
             await self._client.subscribe([
                 (TOPIC, HBMQTT_CONST.QOS_1),
             ])
 
-        self._loop.run_until_complete(__internal_setup())
+        try:
+            self._loop.run_until_complete(__internal_setup())
+        except KeyboardInterrupt:
+            MQTTMockClient._logger.critical("Interrupted by user. Exit...")
+            exit(0)
+
         return self._client
 
     def run(self):
@@ -91,15 +100,8 @@ class MQTTMockClient:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Example daemon in Python")
-    parser.add_argument('-p', '--port', help="Broker's port to connect", action="store", default=1883)
-    parser.add_argument('--period', help="Period of message generation", action="store", default=1)
-    parser.add_argument('--log_file', nargs='?', help='File for logging', action="store", const="log.log",
-                        default=None)
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('-v', help='Verbose output', action="count", default=0)
-    group.add_argument('-q', help="Don't output anything", action="store_true")
-    args = parser.parse_args()
+    args = client_parser(sys.argv)
+    MAX_VERBOSITY = 5
 
     verbosity_level = logging.WARNING
     if args.v == 3:
@@ -124,6 +126,7 @@ def main():
         file_handler = logging.FileHandler("{}".format(args.log_file))
         logger.addHandler(file_handler)
     else:
+        print(logger.handlers)
         logger.addHandler(logging.StreamHandler())
 
     # NP: Cloud Nothings — Cut You
