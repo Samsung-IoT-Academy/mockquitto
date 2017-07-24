@@ -1,13 +1,5 @@
-#! /usr/bin/env python
-
-import signal
 import errno
 import socket
-import logging
-import functools
-import asyncio
-
-from hbmqtt.broker import Broker
 
 
 class BrokerConfig:
@@ -39,6 +31,10 @@ class BrokerConfig:
     def port(self, value):
         self.__port = value
 
+    @property
+    def domain(self):
+        return self.__domain
+
     def broker_port(self, port=1883):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while True:
@@ -52,28 +48,3 @@ class BrokerConfig:
         addr, port = s.getsockname()
         s.close()
         return port
-
-
-@asyncio.coroutine
-def broker_coro(broker, config):
-    yield from broker.start()
-
-
-if __name__ == '__main__':
-    formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
-    logging.basicConfig(level=logging.INFO, format=formatter)
-    logger = logging.getLogger(name="MQTT-Broker")
-
-    config = BrokerConfig()
-    broker = Broker(config.get_config())
-
-    loop = asyncio.get_event_loop()
-
-    loop.run_until_complete(broker_coro(broker, config))
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        loop.run_until_complete(broker.shutdown())
-    finally:
-        logger.info("Closing")
-        loop.close()

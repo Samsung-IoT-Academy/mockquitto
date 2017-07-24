@@ -1,2 +1,10 @@
-.idea/
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# pyenv
 .python-version
+
+# IDE
+.idea/

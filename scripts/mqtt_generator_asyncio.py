@@ -1,5 +1,3 @@
-#! /usr/bin/env python
-
 import os
 import signal
 import asyncio
@@ -92,7 +90,7 @@ class MQTTMockClient:
 
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description="Example daemon in Python")
     parser.add_argument('-p', '--port', help="Broker's port to connect", action="store", default=1883)
     parser.add_argument('--period', help="Period of message generation", action="store", default=1)
@@ -143,3 +141,6 @@ if __name__ == '__main__':
     finally:
         client.clean()
         loop.close()
+
+if __name__ == '__main__':
+    main()
