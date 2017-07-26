@@ -120,13 +120,12 @@ def main():
     logger = logging.getLogger(LOGGER_NAME)
 
     logger.handlers = []
-    if args.q:
+    if args.q or args.v == 0:
         logger.addHandler(logging.NullHandler())
     elif args.log_file:
         file_handler = logging.FileHandler("{}".format(args.log_file))
         logger.addHandler(file_handler)
     else:
-        print(logger.handlers)
         logger.addHandler(logging.StreamHandler())
 
     # NP: Cloud Nothings — Cut You
