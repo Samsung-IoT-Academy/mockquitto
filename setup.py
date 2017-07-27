@@ -65,10 +65,10 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        'hbmqtt'
+        'hbmqtt>0.9.0'
     ],
     dependency_links=[
-        'git://git@github.com:beerfactory/hbmqtt.git@f4330985115e3ffb3ccbb102230dfd15bb822a72'
+        'git+https://github.com/beerfactory/hbmqtt.git@f4330985115e3ffb3ccbb102230dfd15bb822a72#egg=hbmqtt-0.9.1.alpha0'
     ],
 
     python_requires="~=3.4",
