@@ -1,9 +1,31 @@
-
-from setuptools import setup, find_packages
 from codecs import open
 from os import path
+from setuptools import setup, find_packages
+from setuptools.command.install import install
 
-NAME = "mockquitto"
+
+class PostInstallCommand(install):
+    def run(self):
+        self.install_hbmqtt()
+        install.run(self)
+
+    @staticmethod
+    def install_hbmqtt():
+        import pip
+        import os
+        git_links = {
+            "hbmqtt": "git+https://github.com/beerfactory/hbmqtt.git@f4330985115e3ffb3ccbb102230dfd15bb822a72",
+        }
+        pip_cli_args = []
+        try:
+            pip_cli_args += ['--proxy'] + os.environ['http_proxy']
+        except KeyError:
+            pass
+        pip_cli_args += ['install'] + [_ for _ in git_links.values()]
+
+        print("Installing prerequirements packages :{0}".format(" ".join(git_links.keys())))
+        pip.main(pip_cli_args)
+
 
 def get_version():
     filehash = {}
@@ -11,15 +33,14 @@ def get_version():
         exec(fp.read(), filehash)
     return filehash['__version__']
 
+
 def read(fname):
     with open(path.join(here, fname), encoding='utf-8', mode='r') as f:
         return f.read()
 
+
+NAME = "mockquitto"
 here = path.abspath(path.dirname(__file__))
-
-
-# Get the long description from the README file
-
 
 setup(
     name=NAME,
@@ -64,11 +85,17 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
+    cmdclass={
+        'install': PostInstallCommand,
+    },
+    setup_requires=[
+        'pip'
+    ],
     install_requires=[
-        'hbmqtt>0.9.0'
+        # 'hbmqtt>0.9.0'
     ],
     dependency_links=[
-        'git+https://github.com/beerfactory/hbmqtt.git@f4330985115e3ffb3ccbb102230dfd15bb822a72#egg=hbmqtt-0.9.1.alpha0'
+        # 'git+https://github.com/beerfactory/hbmqtt.git@f4330985115e3ffb3ccbb102230dfd15bb822a72#egg=hbmqtt-0.9.1.alpha0'
     ],
 
     python_requires="~=3.4",
