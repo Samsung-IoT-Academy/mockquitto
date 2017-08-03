@@ -4,13 +4,14 @@ import signal
 import asyncio
 import argparse
 import logging
+import random
 
 from hbmqtt.client import MQTTClient, ClientException, ConnectException
 import hbmqtt.mqtt.constants as HBMQTT_CONST
 
 from mockquitto.client.cli_utils import client_parser
 
-TOPIC = 'paho/temperature'
+TOPIC = 'devices/lora/807B85902000019A/gps'
 
 
 class MQTTMockClient:
@@ -31,15 +32,15 @@ class MQTTMockClient:
         return self._client
 
     def setup(self):
-        async def __internal_setup():
+        @asyncio.coroutine
+        def __internal_setup():
             try:
-                await self._client.connect("mqtt://localhost:" + str(self._broker_port))
+                yield from self._client.connect("mqtt://localhost:" + str(self._broker_port))
             except ConnectException:
                 MQTTMockClient._logger.critical("Cannot connect to broker. Exit...")
                 exit(0)
 
-
-            await self._client.subscribe([
+            yield from self._client.subscribe([
                 (TOPIC, HBMQTT_CONST.QOS_1),
             ])
 
@@ -52,11 +53,12 @@ class MQTTMockClient:
         return self._client
 
     def run(self):
-        async def __main():
+        @asyncio.coroutine
+        def __main():
             task_deliver = self._loop.create_task(self.deliver(self._client))
             task_send = self._loop.create_task(self.send(self._client))
-            await task_deliver
-            await task_send
+            yield from task_deliver
+            yield from task_send
 
         try:
             self._loop.run_until_complete(__main())
@@ -64,28 +66,34 @@ class MQTTMockClient:
             MQTTMockClient._logger.debug("Catch the exception!")
 
     def clean(self):
-        async def __clean():
-            await self._client.unsubscribe([TOPIC])
-            await self._client.disconnect()
+        @asyncio.coroutine
+        def __clean():
+            yield from self._client.unsubscribe([TOPIC])
+            yield from self._client.disconnect()
+            yield from asyncio.sleep(0.5)
+
         try:
             self._loop.run_until_complete(__clean())
         except asyncio.CancelledError as err:
             MQTTMockClient._logger.debug("Catch the exception!")
 
-    async def deliver(self, client):
+    @asyncio.coroutine
+    def deliver(self, client):
         try:
             while self._status:
-                message = await client.deliver_message()
-                await asyncio.sleep(self._period)
+                message = yield from client.deliver_message()
+                yield from asyncio.sleep(self._period)
                 MQTTMockClient._logger.info("Message: %s" % message.data)
         except ClientException as ce:
             MQTTMockClient._logger.error("Client exception: %s" % ce)
 
-    async def send(self, client):
+    @asyncio.coroutine
+    def send(self, client):
         # for i in range(1, 20):
         while self._status:
-            message = await client.publish(TOPIC, b'i want to publish', qos=HBMQTT_CONST.QOS_1)
-            await asyncio.sleep(self._period)
+            payload = "\"lat\":{0},\"lon\":{1}".format(self._get_lat(), self._get_lon())
+            message = yield from client.publish(TOPIC, payload.encode('utf-8'), qos=HBMQTT_CONST.QOS_1)
+            yield from asyncio.sleep(self._period)
             MQTTMockClient._logger.debug("Message published")
 
     @classmethod
@@ -97,6 +105,17 @@ class MQTTMockClient:
         if len(asyncio.Task.all_tasks()) > 0:
             os.kill(os.getpid(), signal.SIGINT)
 
+    # -----
+
+    def _get_lat(self):
+        start_lat = 55.4507
+        lat = start_lat + random.uniform(-1, 1)
+        return "{:.4f}".format(lat)
+
+    def _get_lon(self):
+        start_lon = 37.3656
+        lon = start_lon + random.uniform(-1, 1)
+        return "{:.4f}".format(lon)
 
 
 def main():
@@ -123,7 +142,7 @@ def main():
     if args.q or args.v == 0:
         logger.addHandler(logging.NullHandler())
     elif args.log_file:
-        file_handler = logging.FileHandler("{}".format(args.log_file))
+        file_handler = logging.FileHandler(args.log_file)
         logger.addHandler(file_handler)
     else:
         logger.addHandler(logging.StreamHandler())

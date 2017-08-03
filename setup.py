@@ -92,10 +92,7 @@ setup(
         'pip'
     ],
     install_requires=[
-        'hbmqtt>0.9.0'
-    ],
-    dependency_links=[
-        'https://github.com/beerfactory/hbmqtt/archive/f4330985115e3ffb3ccbb102230dfd15bb822a72.zip#egg=hbmqtt-0.9.1'
+        'hbmqtt_samsung>0.9.0'
     ],
 
     python_requires="~=3.4",
@@ -111,8 +108,8 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'mqtt-broker = scripts.broker:main',
-            'mqtt-async-generator = scripts.mqtt_generator_asyncio:main',
+            'mqtt-broker = mockquitto.scripts.broker:main',
+            'mqtt-async-generator = mockquitto.scripts.mqtt_generator_asyncio:main',
         ],
     },
 )
