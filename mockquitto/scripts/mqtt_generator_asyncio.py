@@ -10,6 +10,10 @@ from hbmqtt.client import MQTTClient, ClientException, ConnectException
 import hbmqtt.mqtt.constants as HBMQTT_CONST
 
 from mockquitto.client.cli_utils import client_parser
+from mockquitto.client.devices.gps import GPS
+from mockquitto.client.generator.generator import GeneratorInfinite
+from mockquitto.client.generator.laws import RandomReal
+from mockquitto.client.devices.values import GPSCoordinates
 
 TOPIC = 'devices/lora/807B85902000019A/gps'
 
@@ -26,6 +30,11 @@ class MQTTMockClient:
         self._period = period
         if MQTTMockClient._logger is None:
             MQTTMockClient._logger = logging.getLogger(logger_name)
+
+        coords_gps = GPSCoordinates(55.4507, 37.3656)
+        gen_law_list = RandomReal(coords_gps[0], (-1, 1)), RandomReal(coords_gps[1], (-1, 1))
+        generator = GeneratorInfinite(coords_gps, gen_law_list, freq_value=0.5)
+        self.device = GPS(generator)
 
     @property
     def client(self):
@@ -91,9 +100,10 @@ class MQTTMockClient:
     def send(self, client):
         # for i in range(1, 20):
         while self._status:
-            payload = "\"lat\":{0},\"lon\":{1}".format(self._get_lat(), self._get_lon())
-            message = yield from client.publish(TOPIC, payload.encode('utf-8'), qos=HBMQTT_CONST.QOS_1)
-            yield from asyncio.sleep(self._period)
+            time, string = self.device.get()
+            print(string)
+            yield from client.publish(TOPIC, string.encode('utf-8'), qos=HBMQTT_CONST.QOS_1)
+            yield from asyncio.sleep(time)
             MQTTMockClient._logger.debug("Message published")
 
     @classmethod
@@ -104,18 +114,6 @@ class MQTTMockClient:
             task.cancel()
         if len(asyncio.Task.all_tasks()) > 0:
             os.kill(os.getpid(), signal.SIGINT)
-
-    # -----
-
-    def _get_lat(self):
-        start_lat = 55.4507
-        lat = start_lat + random.uniform(-1, 1)
-        return "{:.4f}".format(lat)
-
-    def _get_lon(self):
-        start_lon = 37.3656
-        lon = start_lon + random.uniform(-1, 1)
-        return "{:.4f}".format(lon)
 
 
 def main():
