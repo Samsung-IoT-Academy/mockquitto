@@ -1,5 +1,4 @@
 from mockquitto.client.generator import Generator
-
 from mockquitto.client.devices.device import Device
 from mockquitto.client.devices.values import GPSCoordinates
 
@@ -12,7 +11,7 @@ class GPS(Device):
         self._accuracy = accuracy
 
     def format_out(self, value: GPSCoordinates):
-        if isinstance(value, GPSCoordinates):
+        if isinstance(value, self._value_cls):
             return self._fmt_str.format(value.lat, value.lon)
         else:
             raise ValueError

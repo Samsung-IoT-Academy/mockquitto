@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-import asyncio
 
 from mockquitto.client.generator import Generator
 
@@ -36,10 +35,11 @@ class Device(metaclass=ABCMeta):
         self._iter_nums = iters
 
         self._gen_obj = self._get_gen_obj()
+        self._value = None
 
     def _get_gen_obj(self):
         for value_pair in self.generator.get_gen_obj():
-            print(value_pair.time)
+            self._value = value_pair.value
             yield (value_pair.time, self.format_out(value_pair.value))
 
     def get(self):
