@@ -1,4 +1,4 @@
-def merge_dicts(dict1, dict2) -> dict:
+def merge_dicts(dict1: dict, dict2: dict) -> dict:
     def _generator_dict(dict1, dict2):
         for key in set(dict1.keys()).union(dict2.keys()):
             if key in dict1 and key in dict2:
@@ -11,4 +11,8 @@ def merge_dicts(dict1, dict2) -> dict:
             elif key in dict2:
                 yield (key, dict2[key])
 
-    return dict(_generator_dict(dict1, dict2))
+    t = dict(_generator_dict(dict1, dict2))
+    return t
+
+def stringify_dict_open(dict) -> str:
+    return str(dict)[:-1] + ","

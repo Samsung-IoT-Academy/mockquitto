@@ -11,9 +11,10 @@ import hbmqtt.mqtt.constants as HBMQTT_CONST
 
 from mockquitto.client.cli_utils import client_parser
 from mockquitto.client.devices.gps import GPS
+from mockquitto.client.devices.multipurpose import TempHumDevice
 from mockquitto.client.generator.generator import GeneratorInfinite
-from mockquitto.client.generator.laws import RandomReal
-from mockquitto.client.devices.values import GPSCoordinates
+from mockquitto.client.generator.laws import RandomReal, RandomInteger
+from mockquitto.client.devices.values import GPSCoordinates, Temperature, Humidity
 
 TOPIC = 'devices/lora/807B85902000019A/gps'
 
@@ -31,10 +32,13 @@ class MQTTMockClient:
         if MQTTMockClient._logger is None:
             MQTTMockClient._logger = logging.getLogger(logger_name)
 
-        coords_gps = GPSCoordinates(55.4507, 37.3656)
-        gen_law_list = RandomReal(coords_gps[0], (-1, 1)), RandomReal(coords_gps[1], (-1, 1))
-        generator = GeneratorInfinite(coords_gps, gen_law_list, freq_value=0.5)
-        self.device = GPS(generator)
+        # coords_gps = GPSCoordinates(55.4507, 37.3656)
+        # gen_law_list = RandomReal(coords_gps[0], (-1, 1)), RandomReal(coords_gps[1], (-1, 1))
+        # generator = GeneratorInfinite(GPSCoordinates, gen_law_list, freq_value=0.5)
+        gen_laws = RandomReal(20, 40), RandomInteger(0, 100)
+        generators = GeneratorInfinite(Temperature, gen_laws[0], generator_name="Temperature", freq_value=0.5),\
+                     GeneratorInfinite(Humidity, gen_laws[1], generator_name="Humidity", freq_value=0.5)
+        self.device = TempHumDevice(generators)
 
     @property
     def client(self):

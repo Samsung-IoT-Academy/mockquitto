@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
 import random
 
+from mockquitto.client.exceptions import LawCreationError
+
 
 class LawGeneration(metaclass=ABCMeta):
     @abstractmethod
@@ -13,9 +15,13 @@ class Random(LawGeneration):
         if isinstance(range_value, (list, tuple)) and len(range_value) == 2:
             self.start_value = start_value + range_value[0] if range_value[0] < 0 else start_value - range_value[0]
             self.end_value = start_value + range_value[1]
-        else:
+        elif isinstance(range_value, (list, tuple)) and len(range_value) == 1:
             self.start_value = start_value
             self.end_value = start_value + range_value
+        else:
+            self.start_value = start_value
+            self.end_value = range_value
+
         self.is_random = True
         self.random_generator = self.create_random_generator()
 
@@ -25,10 +31,11 @@ class Random(LawGeneration):
         return next(self.random_generator)
 
     def create_random_generator(self):
-        while self.is_random is True:
-            self._last_generated = self.get_random()
+        while True:
+            while self.is_random is True:
+                self._last_generated = self.get_random()
+                yield self._last_generated
             yield self._last_generated
-        yield self._last_generated
 
     @abstractmethod
     def get_random(self):

@@ -3,12 +3,9 @@ from mockquitto.client.devices import Device
 from mockquitto.client.devices.values import Humidity as HumidityValue
 
 class HumidityDevice(Device):
-    def __init__(self, generator: Generator):
+    def __init__(self, generator: Generator, dev_name=None):
         fmt_str = "\"humidity\":{hum:d}"
-        self._dict_repr = {
-            'humidity': self._value.value
-        }
-        super().__init__(generator=generator, format_str=fmt_str)
+        super().__init__(generator=generator, format_str=fmt_str, dev_name=dev_name)
         self._value_cls = HumidityValue
 
     def format_out(self, value: HumidityValue):

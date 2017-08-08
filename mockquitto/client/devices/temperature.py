@@ -3,12 +3,9 @@ from mockquitto.client.devices import Device
 from mockquitto.client.devices.values import Temperature as TemperatureValue
 
 class TemperatureDevice(Device):
-    def __init__(self, generator: Generator):
+    def __init__(self, generator: Generator, dev_name=None):
         fmt_str = "\"temperature\":{temp:d}"
-        self._dict_repr = {
-            'temperature': self._value.value
-        }
-        super().__init__(generator=generator, format_str=fmt_str)
+        super().__init__(generator=generator, format_str=fmt_str, dev_name=dev_name)
         self._value_cls = TemperatureValue
 
     def format_out(self, value: TemperatureValue):

@@ -26,7 +26,7 @@ class ValuePair:
     """
     permissible_indexes = (0, 1)
 
-    def __init__(self, time, value):
+    def __init__(self, time=None, value=None):
         self.time = time
         self.value = value
         self._dict = {
@@ -42,23 +42,47 @@ class ValuePair:
         else:
             return self._dict.get(item)
 
+    def __iadd__(self, other):
+        if self.time is None:
+            self.time = other.time
+        else:
+            self.time += other.time
+
+        if self.value is None:
+            self.value = other.value
+        else:
+            if isinstance(self.value, list) and isinstance(other.value, list):
+                self.value.extend(other.value)
+            elif isinstance(self.value, list) and not isinstance(other.value, list):
+                self.value.append(other.value)
+            elif not isinstance(self.value, list) and isinstance(other.value, list):
+                self.value = [self.value]
+                self.value.extend(other.value)
+            elif not isinstance(self.value, list) and not isinstance(other.value, list):
+                self.value = [self.value]
+                self.value.append(other.value)
+
+        return self
+
+    def __str__(self) -> str:
+        return "{} {}".format(self.time, self.value)
+
 
 class Generator(metaclass=ABCMeta):
     """
     Base generator object for generating values
     """
-    def __init__(self, start_value, gen_law,
-                 freq_type: FrequencyType=FrequencyType.CONSTANT, **kwargs):
+    def __init__(self, value_cls, gen_law, freq_type: FrequencyType=FrequencyType.CONSTANT, generator_name=None,
+                 **kwargs):
         """
-        Initializing Generator object
+        Initializing generator object
 
         :param start_value:
         :param gen_law: tuple, list of LawGeneration derived objects or one instance of it
-        :param freq_type:
+        :param freq_type: distribution of time, which async task will sleep until next request of generation
         :param kwargs:
         """
-        self.gen_law_list = gen_law if isinstance(gen_law, (list, tuple)) else tuple(gen_law)
-        self.start_value = start_value
+        self.gen_law_list = gen_law if isinstance(gen_law, (list, tuple)) else tuple([gen_law])
         self.freq_type = freq_type
         if freq_type is FrequencyType.CONSTANT and 'freq_value' in kwargs:
             self.freq_value = kwargs['freq_value']
@@ -69,16 +93,29 @@ class Generator(metaclass=ABCMeta):
 
         self._generation_flag = False
         self._generator_obj = self._generator_impl()
-        self._value_cls = self.start_value.__class__
+        self._value_cls = value_cls
+        self._name = generator_name
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, new_name):
+        self._name = new_name
+
+    def get_gen_obj(self):
+        return self._generator_obj
 
     @abstractmethod
     def _generator_impl(self):
         pass
 
-    def get_gen_obj(self):
-        return self._generator_obj
-
     def next(self):
+        """
+        Calls __next__ method of Generator object
+        :return: next value from generator
+        """
         return next(self._generator_obj)
 
     def stop(self):
@@ -95,8 +132,8 @@ class Generator(metaclass=ABCMeta):
 
 
 class GeneratorFinite(Generator):
-    def __init__(self, start_value, gen_law, *args, **kwargs):
-        super().__init__(start_value, gen_law, *args, **kwargs)
+    def __init__(self, value_cls, gen_law, *args, **kwargs):
+        super().__init__(value_cls, gen_law, *args, **kwargs)
         self._gen_type = GenerationType.FINITE
         self._stop_value = kwargs.get('stop_value')
         self._iters = kwargs.get('iters')
@@ -114,8 +151,8 @@ class GeneratorFinite(Generator):
 
 
 class GeneratorInfinite(Generator):
-    def __init__(self, start_value, gen_law, *args, **kwargs):
-        super().__init__(start_value, gen_law, *args, **kwargs)
+    def __init__(self, value_cls, gen_law, *args, **kwargs):
+        super().__init__(value_cls, gen_law, *args, **kwargs)
         self._gen_type = GenerationType.INFINITE
 
     def _generator_impl(self):

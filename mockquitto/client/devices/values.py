@@ -1,5 +1,6 @@
 class GPSCoordinates:
     permissible_indexes = (0, 1)
+    valuable_fields = ("lat", "lon")
 
     def __init__(self, lat, lon=None):
         if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
@@ -14,9 +15,6 @@ class GPSCoordinates:
             1: self.lon
         }
 
-    def tuplize(self):
-        return self.lat, self.lon
-
     def __getitem__(self, item):
         if item not in self.permissible_indexes:
             raise IndexError
@@ -25,12 +23,19 @@ class GPSCoordinates:
         else:
             return self._dict.get(item)
 
+    def tuplize(self):
+        return self.lat, self.lon
+
+    def dictify(self):
+        return { key: vars(self)[key] for key in vars(self).keys() if key in self.valuable_fields }
+
 
 class SingleValue:
     possible_range = {
         'min': None,
         'max': None
     }
+    field_name = ""
 
     def __init__(self, value):
         if isinstance(value, (int, float)):
@@ -41,10 +46,6 @@ class SingleValue:
         if self._checking_range(self.value) is False:
             raise ValueError
 
-    def _checking_range(self, value_to_check):
-        return True if (value_to_check >= self.possible_range['max'] and
-                        value_to_check <= self.possible_range['min']) else False
-
     def __getitem__(self, item):
         self._dict = {}
         if item != 0:
@@ -54,8 +55,15 @@ class SingleValue:
         else:
             return self.value
 
+    def _checking_range(self, value_to_check):
+        return True if (value_to_check <= self.possible_range['max'] and
+                        value_to_check >= self.possible_range['min']) else False
+
     def tuplize(self):
         return tuple(self.value)
+
+    def dictify(self):
+        return { self.field_name: self.value }
 
 
 class Humidity(SingleValue):
@@ -63,6 +71,7 @@ class Humidity(SingleValue):
         'min': 0,
         'max': 100
     }
+    field_name = "humidity"
 
 
 class Temperature(SingleValue):
@@ -70,6 +79,7 @@ class Temperature(SingleValue):
         'min': -273,
         'max': 105
     }
+    field_name = "temperature"
 
     def to_kelvins(self):
         return self.value + 273
