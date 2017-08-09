@@ -74,7 +74,6 @@ class MultichannelDevice(MultiDevice):
         self._value_cls = devices[0].generator.value_cls
         self._value_dict = {}
 
-
     def get(self):
         accum_time = 0
         for device in self.device_list:
@@ -85,7 +84,6 @@ class MultichannelDevice(MultiDevice):
 
         print(self._value_dict)
         return accum_time / len(self.device_list), self.format_out()
-
 
     def format_out(self, value):
         pass
