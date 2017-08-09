@@ -4,9 +4,9 @@ from mockquitto.client.devices.values import GPSCoordinates
 
 
 class GPS(Device):
-    def __init__(self, generator: Generator, accuracy=4):
+    def __init__(self, generator: Generator, accuracy=4, **kwargs):
         fmt_str = "\"lat\":{{0:.{0}f}},\"lon\":{{1:.{1}f}}".format(accuracy, accuracy)
-        super().__init__(generator=generator, format_str=fmt_str)
+        super().__init__(generator=generator, format_str=fmt_str, **kwargs)
         self._value_cls = GPSCoordinates
         self._accuracy = accuracy
 

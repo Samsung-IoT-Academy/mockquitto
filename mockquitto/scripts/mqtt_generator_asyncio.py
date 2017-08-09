@@ -10,14 +10,9 @@ from hbmqtt.client import MQTTClient, ClientException, ConnectException
 import hbmqtt.mqtt.constants as HBMQTT_CONST
 
 from mockquitto.client.cli_utils import client_parser
-from mockquitto.client.devices.gps import GPS
-from mockquitto.client.devices.multipurpose import TempHumDevice
-from mockquitto.client.generator.generator import GeneratorInfinite
-from mockquitto.client.generator.laws import RandomReal, RandomInteger
-from mockquitto.client.devices.values import GPSCoordinates, Temperature, Humidity
+from mockquitto.client.devices.factories import IoTAcademyFactory
 
 TOPIC = 'devices/lora/807B85902000019A/gps'
-
 
 class MQTTMockClient:
 
@@ -32,13 +27,8 @@ class MQTTMockClient:
         if MQTTMockClient._logger is None:
             MQTTMockClient._logger = logging.getLogger(logger_name)
 
-        # coords_gps = GPSCoordinates(55.4507, 37.3656)
-        # gen_law_list = RandomReal(coords_gps[0], (-1, 1)), RandomReal(coords_gps[1], (-1, 1))
-        # generator = GeneratorInfinite(GPSCoordinates, gen_law_list, freq_value=0.5)
-        gen_laws = RandomReal(20, 40), RandomInteger(0, 100)
-        generators = GeneratorInfinite(Temperature, gen_laws[0], generator_name="Temperature", freq_value=0.5),\
-                     GeneratorInfinite(Humidity, gen_laws[1], generator_name="Humidity", freq_value=0.5)
-        self.device = TempHumDevice(generators)
+        self._devices = IoTAcademyFactory.create_adc(),
+        self.coros = [self.create_coro(d) for d in self._devices]
 
     @property
     def client(self):
@@ -59,24 +49,26 @@ class MQTTMockClient:
 
         try:
             self._loop.run_until_complete(__internal_setup())
-        except KeyboardInterrupt:
-            MQTTMockClient._logger.critical("Interrupted by user. Exit...")
-            exit(0)
+        except asyncio.CancelledError:
+            pass
 
         return self._client
 
     def run(self):
-        @asyncio.coroutine
-        def __main():
-            task_deliver = self._loop.create_task(self.deliver(self._client))
-            task_send = self._loop.create_task(self.send(self._client))
-            yield from task_deliver
-            yield from task_send
-
         try:
-            self._loop.run_until_complete(__main())
+            self.task_deliver = self._loop.create_task(self.deliver(self._client))
+            self.tasks_send = [asyncio.ensure_future(c(), loop=self._loop) for c in self.coros]
+            self._loop.run_forever()
         except asyncio.CancelledError as err:
             MQTTMockClient._logger.debug("Catch the exception!")
+
+    def stop(self):
+        while self.task_deliver.cancelled is False and not all(t.cancelled for t in self.tasks_send):
+            self.task_deliver.cancel()
+            for t in self.tasks_send:
+                t.cancel()
+            print("S A D")
+
 
     def clean(self):
         @asyncio.coroutine
@@ -100,15 +92,18 @@ class MQTTMockClient:
         except ClientException as ce:
             MQTTMockClient._logger.error("Client exception: %s" % ce)
 
-    @asyncio.coroutine
-    def send(self, client):
-        # for i in range(1, 20):
-        while self._status:
-            time, string = self.device.get()
-            print(string)
-            yield from client.publish(TOPIC, string.encode('utf-8'), qos=HBMQTT_CONST.QOS_1)
-            yield from asyncio.sleep(time)
-            MQTTMockClient._logger.debug("Message published")
+    def create_coro(self, device):
+        @asyncio.coroutine
+        def send(device=device, self=self, client=self._client):
+            # for i in range(1, 20):
+            while self._status:
+                time, string = device.get()
+                print(string)
+                print(time)
+                yield from client.publish(device.mqtt_topic, string.encode('utf-8'), qos=HBMQTT_CONST.QOS_1)
+                yield from asyncio.sleep(time)
+                MQTTMockClient._logger.debug("Message published")
+        return send
 
     @classmethod
     def my_handler(self):
@@ -156,11 +151,14 @@ def main():
     client.setup()
 
     loop = asyncio.get_event_loop()
-    loop.add_signal_handler(signal.SIGINT, client.my_handler)
+    # loop.add_signal_handler(signal.SIGINT, client.my_handler)
 
     # loop.run_until_complete(clean(client))
     try:
         client.run()
+    except KeyboardInterrupt:
+        MQTTMockClient._logger.critical("Interrupted by user. Exit...")
+        client.stop()
     finally:
         client.clean()
         loop.close()

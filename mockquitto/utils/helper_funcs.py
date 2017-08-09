@@ -11,8 +11,8 @@ def merge_dicts(dict1: dict, dict2: dict) -> dict:
             elif key in dict2:
                 yield (key, dict2[key])
 
-    t = dict(_generator_dict(dict1, dict2))
-    return t
+    return dict(_generator_dict(dict1, dict2))
+
 
 def stringify_dict_open(dict) -> str:
     return str(dict)[:-1] + ","

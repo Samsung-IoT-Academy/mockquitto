@@ -1,3 +1,8 @@
+from sys import maxsize
+
+MAX_INT = maxsize
+
+
 class GPSCoordinates:
     permissible_indexes = (0, 1)
     valuable_fields = ("lat", "lon")
@@ -27,7 +32,7 @@ class GPSCoordinates:
         return self.lat, self.lon
 
     def dictify(self):
-        return { key: vars(self)[key] for key in vars(self).keys() if key in self.valuable_fields }
+        return {key: vars(self)[key] for key in vars(self).keys() if key in self.valuable_fields}
 
 
 class SingleValue:
@@ -56,14 +61,13 @@ class SingleValue:
             return self.value
 
     def _checking_range(self, value_to_check):
-        return True if (value_to_check <= self.possible_range['max'] and
-                        value_to_check >= self.possible_range['min']) else False
+        return True if (self.possible_range['max'] >= value_to_check >= self.possible_range['min']) else False
 
     def tuplize(self):
         return tuple(self.value)
 
     def dictify(self):
-        return { self.field_name: self.value }
+        return {self.field_name: self.value}
 
 
 class Humidity(SingleValue):
@@ -89,3 +93,18 @@ class Temperature(SingleValue):
 
     def to_celsius(self):
         return self.value
+
+
+class Luxes(SingleValue):
+    possible_range = {
+        'min': 0,
+        'max': MAX_INT
+    }
+
+
+class MilliVolts(SingleValue):
+    possible_range = {
+        'min': 0,
+        'max': 5000
+    }
+    field_name = "millivolts"

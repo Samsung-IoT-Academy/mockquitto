@@ -61,7 +61,6 @@ class ValuePair:
             elif not isinstance(self.value, list) and not isinstance(other.value, list):
                 self.value = [self.value]
                 self.value.append(other.value)
-
         return self
 
     def __str__(self) -> str:
@@ -103,6 +102,10 @@ class Generator(metaclass=ABCMeta):
     @name.setter
     def name(self, new_name):
         self._name = new_name
+
+    @property
+    def value_cls(self):
+        return self._value_cls
 
     def get_gen_obj(self):
         return self._generator_obj

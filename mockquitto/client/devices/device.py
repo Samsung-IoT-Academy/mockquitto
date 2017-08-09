@@ -13,7 +13,8 @@ class Device(metaclass=ABCMeta):
         freq_type -- time between generations of messages, may be constant or random
     """
 
-    def __init__(self, format_str=None, generator: Generator=None, dev_name=None):
+    def __init__(self, format_str=None, generator: Generator=None, dev_name=None, topic=None, *, field_holder=None,
+                 dev_num=0):
         """
 
         :param format_str: string for formatting messages
@@ -22,9 +23,12 @@ class Device(metaclass=ABCMeta):
         self._fmt_str = format_str
         self.generator = generator
         self._name = dev_name
+        self._field_holder = field_holder
+        self._dev_num = dev_num
 
         self._gen_obj = self.generator_func()
         self._value = None
+        self._mqtt_topic = topic
 
     @property
     def name(self) -> str:
@@ -42,6 +46,20 @@ class Device(metaclass=ABCMeta):
     def format_string(self) -> str:
         return self._fmt_str
 
+    @property
+    def field_holder(self) -> str:
+        return self._field_holder
+
+    @property
+    def dev_num(self) -> int:
+        return self._dev_num
+
+    @property
+    def mqtt_topic(self) -> str:
+        if self._mqtt_topic is None:
+            raise ValueError
+        return self._mqtt_topic
+
     def generator_func(self):
         for value_pair in self.generator.get_gen_obj():
             self._value = value_pair.value
@@ -56,7 +74,6 @@ class Device(metaclass=ABCMeta):
                 yield ValuePair(value_pair.time, value_pair.value.dictify())
             else:
                 raise StopIteration
-
 
     def get(self, return_type: type = str, return_obj: type = tuple):
         next(self._gen_obj)
