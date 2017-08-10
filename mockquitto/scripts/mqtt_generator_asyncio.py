@@ -2,43 +2,62 @@ import sys
 import os
 import signal
 import asyncio
-import argparse
 import logging
-import random
+import json
 
 from hbmqtt.client import MQTTClient, ClientException, ConnectException
 import hbmqtt.mqtt.constants as HBMQTT_CONST
 
 from mockquitto.client.cli_utils import client_parser
+from mockquitto.utils.prettify import json_prettifier
 from mockquitto.client.devices.factories import IoTAcademyFactory
 
 TOPIC = 'devices/lora/807B85902000019A/gps'
 
 class MQTTMockClient:
-
     _logger = None
+    _logger_send = None
+    _logger_send_attrs = {
+        'format': "sss",
+        'handler': logging.NullHandler()
+    }
 
-    def __init__(self, port, period=1, logger_name="MQTT_Generator", loop=None, status=True):
-        self._loop = asyncio.get_event_loop() if (loop is None) else loop
+    def __init__(self, port, period=1, logger_name="mockquitto.client.MQTTMockClient", loop=None, status=True,
+                 parent_logger: logging.Logger = None):
+        self._loop = asyncio.get_event_loop() if loop is None else loop
         self._status = status
         self._client = MQTTClient()
         self._broker_port = port
         self._period = period
-        if MQTTMockClient._logger is None:
-            MQTTMockClient._logger = logging.getLogger(logger_name)
 
-        self._devices = IoTAcademyFactory.create_adc(),
-        self.coros = [self.create_coro(d) for d in self._devices]
+        self._devices = []
+        self._coros = []
+        if __class__._logger is None:
+            if parent_logger is None:
+                __class__._logger = logging.getLogger(logger_name)
+            else:
+                __class__._logger = parent_logger.getChild(str(self.__class__))
+            __class__._logger_send = __class__._logger.getChild("coro.sender")
+
 
     @property
     def client(self):
         return self._client
 
-    def setup(self):
+    @property
+    def event_loop(self):
+        return self._loop
+
+    @classmethod
+    def get_logger(cls):
+        return cls._logger
+
+    def setup(self, cases=None):
         @asyncio.coroutine
         def __internal_setup():
             try:
                 yield from self._client.connect("mqtt://localhost:" + str(self._broker_port))
+                print("Connected to port {port:d}".format(port=self._broker_port))
             except ConnectException:
                 MQTTMockClient._logger.critical("Cannot connect to broker. Exit...")
                 exit(0)
@@ -46,6 +65,19 @@ class MQTTMockClient:
             yield from self._client.subscribe([
                 (TOPIC, HBMQTT_CONST.QOS_1),
             ])
+
+        if isinstance(cases, (list, tuple)):
+            while cases:
+                case = cases.pop(0)
+                if case == 1:
+                    self._devices.append(IoTAcademyFactory.create_temp_hum())
+                elif case == 5:
+                    for e in IoTAcademyFactory.create_luminocity(), IoTAcademyFactory.create_adc():
+                        self._devices.append(e)
+        else:
+            self._devices.append(IoTAcademyFactory.create_temp_hum())
+
+        self._coros = [self.create_coro(d) for d in self._devices]
 
         try:
             self._loop.run_until_complete(__internal_setup())
@@ -57,7 +89,7 @@ class MQTTMockClient:
     def run(self):
         try:
             self.task_deliver = self._loop.create_task(self.deliver(self._client))
-            self.tasks_send = [asyncio.ensure_future(c(), loop=self._loop) for c in self.coros]
+            self.tasks_send = [asyncio.ensure_future(c(), loop=self._loop) for c in self._coros]
             self._loop.run_forever()
         except asyncio.CancelledError as err:
             MQTTMockClient._logger.debug("Catch the exception!")
@@ -67,7 +99,6 @@ class MQTTMockClient:
             self.task_deliver.cancel()
             for t in self.tasks_send:
                 t.cancel()
-            print("S A D")
 
 
     def clean(self):
@@ -95,14 +126,12 @@ class MQTTMockClient:
     def create_coro(self, device):
         @asyncio.coroutine
         def send(device=device, self=self, client=self._client):
-            # for i in range(1, 20):
             while self._status:
                 time, string = device.get()
-                print(string)
-                print(time)
+                MQTTMockClient.get_logger().debug(json_prettifier(string))
                 yield from client.publish(device.mqtt_topic, string.encode('utf-8'), qos=HBMQTT_CONST.QOS_1)
                 yield from asyncio.sleep(time)
-                MQTTMockClient._logger.debug("Message published")
+                MQTTMockClient.get_logger().debug("Message published")
         return send
 
     @classmethod
@@ -117,51 +146,50 @@ class MQTTMockClient:
 
 def main():
     args = client_parser(sys.argv)
-    MAX_VERBOSITY = 5
-
-    verbosity_level = logging.WARNING
-    if args.v == 3:
-        verbosity_level = logging.NOTSET
-    elif args.v == 2:
-        verbosity_level = logging.DEBUG
-    elif args.v == 1:
-        verbosity_level = logging.INFO
-    elif args.v == 0:
-        verbosity_level = logging.CRITICAL
-
-    LOGGER_NAME = "MQTT_Generator"
-
-    formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
-    logging.basicConfig(level=verbosity_level, format=formatter)
-    logger = logging.getLogger(LOGGER_NAME)
-
+    logger = logging.getLogger('mockquitto.client')
     logger.handlers = []
-    if args.q or args.v == 0:
+    verbosity_level = logging.NOTSET
+
+    if args.v == 3:
+        verbosity_level = logging.DEBUG
+    elif args.v == 2:
+        verbosity_level = logging.INFO
+    elif args.v == 1:
+        verbosity_level = logging.WARNING
+    elif args.v == 0 and args.q == 0:
+        verbosity_level = logging.ERROR
+    elif args.q == 1:
+        verbosity_level = logging.CRITICAL
+    elif args.q == 2:
+        verbosity_level = logging.CRITICAL
         logger.addHandler(logging.NullHandler())
-    elif args.log_file:
-        file_handler = logging.FileHandler(args.log_file)
-        logger.addHandler(file_handler)
-    else:
-        logger.addHandler(logging.StreamHandler())
 
-    # NP: Cloud Nothings — Cut You
-    # I need something I can hurt
+    formatter = logging.Formatter(fmt="[%(asctime)s] :: %(levelname)s :: %(message)s")
+    logger.setLevel(verbosity_level)
 
-    client = MQTTMockClient(args.port, args.period)
-    client.setup()
+    if not logger.hasHandlers():
+        if args.log_file:
+            file_handler = logging.FileHandler(args.log_file)
+            logger.addHandler(file_handler)
+        else:
+            stream_handler = logging.StreamHandler()
+            stream_handler.setFormatter(formatter)
+            logger.addHandler(stream_handler)
 
-    loop = asyncio.get_event_loop()
+    client = MQTTMockClient(args.port, args.period, parent_logger=logger)
+    client.setup(args.case)
     # loop.add_signal_handler(signal.SIGINT, client.my_handler)
 
     # loop.run_until_complete(clean(client))
     try:
+        logger.debug("Run the client")
         client.run()
     except KeyboardInterrupt:
         MQTTMockClient._logger.critical("Interrupted by user. Exit...")
         client.stop()
     finally:
         client.clean()
-        loop.close()
+        client.event_loop.close()
 
 if __name__ == '__main__':
     main()

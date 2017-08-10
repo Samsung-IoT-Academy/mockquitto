@@ -1,7 +1,5 @@
 import sys
-import signal
 import logging
-import functools
 import asyncio
 
 from hbmqtt.broker import Broker
