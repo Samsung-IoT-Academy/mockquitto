@@ -4,27 +4,19 @@ from setuptools import setup, find_packages
 from setuptools.command.install import install
 
 
-# class PostInstallCommand(install):
-#     def run(self):
-#         self.install_hbmqtt()
-#         install.run(self)
-#
-#     @staticmethod
-#     def install_hbmqtt():
-#         import pip
-#         import os
-#         git_links = {
-#             "hbmqtt": "git+https://github.com/beerfactory/hbmqtt.git@f4330985115e3ffb3ccbb102230dfd15bb822a72",
-#         }
-#         pip_cli_args = []
-#         try:
-#             pip_cli_args += ['--proxy'] + os.environ['http_proxy']
-#         except KeyError:
-#             pass
-#         pip_cli_args += ['install'] + [_ for _ in git_links.values()]
-#
-#         print("Installing prerequirements packages :{0}".format(" ".join(git_links.keys())))
-#         pip.main(pip_cli_args)
+class InstallWithBabel(install):
+    def run(self):
+        self.install_hbmqtt()
+        install.run(self)
+
+    def install_hbmqtt(self):
+        from babel.messages.frontend import compile_catalog
+        compiler = compile_catalog(self.distribution)
+        option_dict = self.distribution.get_option_dict('compile_catalog')
+        compiler.domain = [option_dict['domain'][1]]
+        compiler.directory = option_dict['directory'][1]
+        compiler.run()
+        super().run()
 
 
 def get_version():
@@ -44,19 +36,13 @@ here = path.abspath(path.dirname(__file__))
 
 setup(
     name=NAME,
-
     version=get_version(),
-
     description='A sample Python project',
     long_description=read("README.rst"),
-
     url='https://github.com/Samsung-IoT-Academy/mockquitto',
-
     author='Georgiy Odisharia',
     author_email='math.kraut.cat@gmail.com',
-
     license='MIT',
-
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Education',
@@ -70,41 +56,23 @@ setup(
         'Topic :: Communications',
         'Topic :: Internet',
     ],
-
     keywords='mqtt',
 
-    # You can just specify the packages manually here if your project is
-    # simple. Or you can use find_packages().
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
-    # Alternatively, if you want to distribute just a my_module.py, uncomment
-    # this:
-    #   py_modules=["my_module"],
+    cmdclass={
+        'install': InstallWithBabel,
+    },
 
-    # List run-time dependencies here.  These will be installed by pip when
-    # your project is installed. For an analysis of "install_requires" vs pip's
-    # requirements files see:
-    # https://packaging.python.org/en/latest/requirements.html
-    # cmdclass={
-    #     'install': PostInstallCommand,
-    # },
-    setup_requires=[
-        'pip'
-    ],
     install_requires=[
         'hbmqtt_samsung>0.9.0'
     ],
-
     python_requires="~=3.4",
-
-    # List additional groups of dependencies here (e.g. development
-    # dependencies). You can install these using the following syntax,
-    # for example:
-    # $ pip install -e .[dev,test]
     # extras_require={
     #     'dev': ['check-manifest'],
     #     'test': ['coverage'],
     # },
+    include_package_data=True,
 
     entry_points={
         'console_scripts': [

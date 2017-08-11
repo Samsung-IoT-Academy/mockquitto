@@ -4,6 +4,9 @@ import signal
 import asyncio
 import logging
 import json
+import gettext
+
+gettext.install('mockquitto', 'locale', ['ngettext'])
 
 from hbmqtt.client import MQTTClient, ClientException, ConnectException
 import hbmqtt.mqtt.constants as HBMQTT_CONST
@@ -57,7 +60,7 @@ class MQTTMockClient:
         def __internal_setup():
             try:
                 yield from self._client.connect("mqtt://localhost:" + str(self._broker_port))
-                print("Connected to port {port:d}".format(port=self._broker_port))
+                print(_("Connected to port {port:d}").format(port=self._broker_port))
             except ConnectException:
                 MQTTMockClient._logger.critical("Cannot connect to broker. Exit...")
                 exit(0)
