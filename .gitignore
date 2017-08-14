@@ -16,3 +16,6 @@ MANIFEST
 # Babel and gettext
 *.pot
 *.mo
+
+# Sphinx
+docs/build/

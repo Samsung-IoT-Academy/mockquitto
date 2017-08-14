@@ -3,7 +3,6 @@ import os
 import signal
 import asyncio
 import logging
-import json
 import gettext
 
 gettext.install('mockquitto', 'locale', ['ngettext'])
@@ -15,8 +14,6 @@ from mockquitto.client.cli_utils import client_parser
 from mockquitto.utils.prettify import json_prettifier
 from mockquitto.client.devices.factories import IoTAcademyFactory
 
-TOPIC = 'devices/lora/807B85902000019A/gps'
-
 class MQTTMockClient:
     _logger = None
     _logger_send = None
@@ -26,11 +23,12 @@ class MQTTMockClient:
     }
 
     def __init__(self, port, period=1, logger_name="mockquitto.client.MQTTMockClient", loop=None, status=True,
-                 parent_logger: logging.Logger = None):
+                 parent_logger: logging.Logger = None, *, sub_topic: str = 'devices/lora/807B85902000019A/gps'):
         self._loop = asyncio.get_event_loop() if loop is None else loop
         self._status = status
         self._client = MQTTClient()
         self._broker_port = port
+        self._subsribe_topic = sub_topic
         self._period = period
 
         self._devices = []
@@ -64,9 +62,11 @@ class MQTTMockClient:
             except ConnectException:
                 MQTTMockClient._logger.critical("Cannot connect to broker. Exit...")
                 exit(0)
+            except OSError:
+                pass
 
             yield from self._client.subscribe([
-                (TOPIC, HBMQTT_CONST.QOS_1),
+                (self._subsribe_topic, HBMQTT_CONST.QOS_1),
             ])
 
         if isinstance(cases, (list, tuple)):
@@ -95,7 +95,7 @@ class MQTTMockClient:
             self.tasks_send = [asyncio.ensure_future(c(), loop=self._loop) for c in self._coros]
             self._loop.run_forever()
         except asyncio.CancelledError as err:
-            MQTTMockClient._logger.debug("Catch the exception!")
+            pass
 
     def stop(self):
         while self.task_deliver.cancelled is False and not all(t.cancelled for t in self.tasks_send):
@@ -107,14 +107,14 @@ class MQTTMockClient:
     def clean(self):
         @asyncio.coroutine
         def __clean():
-            yield from self._client.unsubscribe([TOPIC])
+            yield from self._client.unsubscribe([self._subsribe_topic])
             yield from self._client.disconnect()
             yield from asyncio.sleep(0.5)
 
         try:
             self._loop.run_until_complete(__clean())
         except asyncio.CancelledError as err:
-            MQTTMockClient._logger.debug("Catch the exception!")
+            pass
 
     @asyncio.coroutine
     def deliver(self, client):
@@ -122,9 +122,9 @@ class MQTTMockClient:
             while self._status:
                 message = yield from client.deliver_message()
                 yield from asyncio.sleep(self._period)
-                MQTTMockClient._logger.info("Message: %s" % message.data)
+                MQTTMockClient._logger.info("Message: {}".format(message.data))
         except ClientException as ce:
-            MQTTMockClient._logger.error("Client exception: %s" % ce)
+            MQTTMockClient._logger.error("Client exception: {}".format(ce))
 
     def create_coro(self, device):
         @asyncio.coroutine
@@ -149,23 +149,29 @@ class MQTTMockClient:
 
 def main():
     args = client_parser(sys.argv)
+    root_logger = logging.getLogger()
     logger = logging.getLogger('mockquitto.client')
     logger.handlers = []
     verbosity_level = logging.NOTSET
 
-    if args.v == 3:
+    verbosity = args.v - args.q
+    if verbosity == 3:
         verbosity_level = logging.DEBUG
-    elif args.v == 2:
+    elif verbosity == 2:
         verbosity_level = logging.INFO
-    elif args.v == 1:
+    elif verbosity == 1:
         verbosity_level = logging.WARNING
-    elif args.v == 0 and args.q == 0:
+    elif verbosity == 0:
         verbosity_level = logging.ERROR
-    elif args.q == 1:
+    elif verbosity == -1:
         verbosity_level = logging.CRITICAL
-    elif args.q == 2:
+    elif verbosity == -2:
         verbosity_level = logging.CRITICAL
         logger.addHandler(logging.NullHandler())
+        root_logger.addHandler(logging.NullHandler())
+
+    if verbosity in [0, -1, -2]:
+        root_logger.setLevel(verbosity_level)
 
     formatter = logging.Formatter(fmt="[%(asctime)s] :: %(levelname)s :: %(message)s")
     logger.setLevel(verbosity_level)
