@@ -101,7 +101,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'mockquitto-broker = mockquitto.scripts.broker:main',
+            'mockquitto-server = mockquitto.scripts.broker:main',
             'mockquitto-async-generator = mockquitto.scripts.mqtt_generator_asyncio:main',
         ],
     },
