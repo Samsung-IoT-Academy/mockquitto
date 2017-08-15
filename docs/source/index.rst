@@ -3,58 +3,65 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to mockquitto's documentation!
-======================================
+Mockquitto
+==========
 
-**mockquitto** — MQTT broker and generator of MQTT messages with payload in JSON
-or any other formats based on forked version of HBMQTT_ library.
+**mockquitto** — MQTT сервер и генератор MQTT сообщений с полезной нагрузкой в
+в формате JSON и поддержкой любых других форматов. Основан на ответвлении
+библиотеки HBMQTT_.
 
-Quick start
------------
+Быстрый старт
+-------------
 
-For starting message generator use command-line tool ``mockquitto-async-generator``.
-It allows generating messages for different study cases. By default, starting
-``mockquitto-async-generator`` without parameters leads to connecting to server
-with port 1883 and generate messages by devices from case #1.
+Для запуска генератора сообщений необходимо использовать утилиту командной
+строки ``mockquitto-async-generator``. Она позволяет генерировать сообщения для
+различных кейсов для IoT Академии. По умолчанию при запуске
+``mockquitto-async-generator`` без параметров происходит попыттка подключения
+клиента к серверу, работающем на порту ``1883``, и генерация сообщений от
+устройств, необходимых для кейса №1.
 
-For specifying server's port use ``-p`` option. For example::
+Для того, чтобы указать порт, на котором запущен сервер, необходимо использовать
+опцию ``-p``. Например, чтобы подключиться к серверу, слущающему порт ``1884``,
+необходимо запустить генератор со следующими опциями::
 
    mockquitto-async-generator -p 1884
 
-For specifying desired study case for which messages will be generated use either
-``-c`` or ``--case`` option. For example::
+Для того, чтобы указать номер кейса, для которого нужно генерировать сообщения,
+необходимо использовать опцию ``-c`` или ``--case``. Например::
 
    mockquitto-async-generator -c 1
 
-Generator supports diffetent timings between generating of messages. By default
-period is 1 second. Changing of period looks like::
+Генератор поддерживает разные периоды генерации сообщений. По умолчанию он
+посылает сообщения каждую секунду. Для того, чтобы указать период генерации
+сообщений, необходимо использовать опцию ``--period``::
 
    mockquitto-async-generator --period 2
 
-Mockquitto also supplies MQTT server. Server can be launched from console via
-command ``mockquitto-broker``. Server tries to bind to 1883 port and if this port
-is binded by another application, ``mocqkuitto-broker`` use first available port
-after port 1883.
+Mockquitto также предоставляет MQTT сервер. Сервер может быть запущен из консоли
+при помощи команды ``mockquitto-broker``. Сервер попытается осуществить привязку
+к порту ``1883``, и если порт занят другим приложением, ``mocqkuitto-broker``
+будет использовать первый доступный порт после ``1883``.
 
-Options
--------
+Опции
+-----
 
-Currently, only ``mockquitto-async-generator`` supports command-line options.
+В настоящее время только ``mockquitto-async-generator`` поддерживает опции
+командной строки.
 
-   -p, --port           Port of MQTT server.
-   --period             Period of generating messages.
-   -c, --case           Case number which determines emulating devices.
-   -v                   Give more output. Option is additive, and can be used up
-                        to 3 times.
-   -q                   Give less output. Option is additive, and can be used up
-                        to 2 times.
-   --log-file           Path to a verbose appending log.
-   -V, --version        Output program version and exit.
+   -p, --port           Порт MQTT сервера.
+   --period             Период генерации сообщений.
+   -c, --case           Номер кейса, для которого будут генерироваться сообщения.
+   -v                   Выводить больше сообщений в консоль. Опция аддитивная,
+                        и она может использоваться до трёх раз ``(-vvv)``.
+   -q                   Выводить меньше сообщений в консоль. Опция аддитивная,
+                        и она может использоваться до двух раз ``(-qq)``.
+   --log-file           Путь к лог-файлу для сообщений.
+   -V, --version        Вывести версию программы и вайти.
 
 
 
-Indices and tables
-==================
+Индексы и таблицы
+=================
 
 * :ref:`genindex`
 * :ref:`modindex`
