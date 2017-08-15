@@ -12,7 +12,7 @@ class InstallWithBabel(install):
         self.babel_compile()
         super().run()
 
-    def install_hbmqtt(self):
+    def babel_compile(self):
         from babel.messages.frontend import compile_catalog
         compiler = compile_catalog(self.distribution)
         option_dict = self.distribution.get_option_dict('compile_catalog')
