@@ -82,17 +82,10 @@ Mockquitto также предоставляет MQTT сервер. Сервер
    --log-file           Путь к лог-файлу для сообщений.
    -V, --version        Вывести версию программы и вайти.
 
-Индексы и таблицы
-=================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
 .. toctree::
    :maxdepth: 2
-   :hidden:
 
+   devices/supported_devices
 
 .. _HBMQTT: https://github.com/beerfactory/hbmqtt
 .. _IoT Академии: https://iot-academy.ru/
