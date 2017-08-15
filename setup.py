@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 from setuptools.command.install import install
 
 here = path.abspath(path.dirname(__file__))
-
+NAME = "mockquitto"
 
 class InstallWithBabel(install):
     def run(self):
@@ -32,25 +32,11 @@ def get_version() -> str:
     return filehash['__version__']
 
 def get_name() -> str:
-    not_a_package = ["doc.*", "locale.*", "build", "dist", ".*[.].*"]
-    re_begin = r"^("
-    re_end = r")$"
-    not_a_pkg_re = re.compile(re_begin + re.escape("|".join(not_a_package)) + re_end)
-    dirs = [f for f in listdir(here) if path.isdir(path.join(here, f))]
-    possible_names = [e for e in filter(lambda d: d if not not_a_pkg_re.match(d) else None, dirs)]
-    if len(possible_names) > 1:
-        return NAME
-    else:
-        return possible_names[0]
-
-
+    return NAME
 
 def read(fname):
     with open(path.join(here, fname), encoding='utf-8', mode='r') as f:
         return f.read()
-
-
-NAME = "mockquitto"
 
 setup(
     name=get_name(),
