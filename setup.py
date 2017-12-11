@@ -76,7 +76,7 @@ setup(
     },
 
     install_requires=[
-        'hbmqtt_samsung>0.9.0'
+        'hbmqtt>=0.9.1'
     ],
     python_requires="~=3.4",
     # extras_require={

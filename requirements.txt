@@ -1,1 +1,1 @@
-git+https://github.com/beerfactory/hbmqtt.git@f4330985115e3ffb3ccbb102230dfd15bb822a72#egg=hbmqtt-0.9.1 --pre
+hbmqtt>=0.9.1
